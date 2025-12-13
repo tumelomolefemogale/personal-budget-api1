@@ -63,6 +63,20 @@ app.put('/envelopes/:id', (req, res) => {
     }
 
     res.json(envelope)
+});
+
+// Delete specific envelopes
+app.delete('/envelopes/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const envelope = envelopes.find(env => env.id === id);
+
+    if (!envelope) {
+        return res.status(404).send("Envelope not found.");
+    }
+
+    envelopes = envelopes.filter(env => env.id !== id);
+
+    res.send(`Envelope with ID ${id} deleted successfully.`);
 })
 
 app.listen(PORT, () => {
