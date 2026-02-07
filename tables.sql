@@ -1,0 +1,13 @@
+CREATE TABLE envelopes (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    budget NUMERIC NOT NULL
+);
+
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    envelope_id INT REFERENCES envelopes(id) ON DELETE CASCADE,
+    amount NUMERIC NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
