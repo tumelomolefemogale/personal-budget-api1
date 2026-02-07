@@ -1,0 +1,208 @@
+openapi: 3.0.0
+info:
+  title: Personal Budget API
+  version: 1.0.0
+  description: API for managing envelopes and transactions in a personal budgeting system.
+
+servers:
+  - url: http://localhost:3000
+
+components:
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Groceries
+        budget:
+          type: integer
+          example: 500
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        envelope_id:
+          type: integer
+          example: 1
+        recipient:
+          type: string
+          example: Supermarket
+        amount:
+          type: integer
+          example: 100
+        date:
+          type: string
+          format: date-time
+          example: '2026-02-07T12:00:00Z'
+
+paths:
+  /envelopes:
+    get:
+      summary: Get all envelopes
+      tags: [Envelopes]
+      responses:
+        200:
+          description: List of envelopes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Envelope'
+
+    post:
+      summary: Create a new envelope
+      tags: [Envelopes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Envelope'
+      responses:
+        201:
+          description: Envelope created
+
+  /envelopes/{id}:
+    get:
+      summary: Get envelope by ID
+      tags: [Envelopes]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Envelope ID
+      responses:
+        200:
+          description: Envelope found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        404:
+          description: Envelope not found
+
+    put:
+      summary: Update an envelope
+      tags: [Envelopes]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                withdrawal:
+                  type: integer
+      responses:
+        200:
+          description: Envelope updated
+        400:
+          description: Invalid request
+        404:
+          description: Envelope not found
+
+    delete:
+      summary: Delete an envelope
+      tags: [Envelopes]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        200:
+          description: Envelope deleted
+        404:
+          description: Envelope not found
+
+  /envelopes/transfer/{from}/{to}:
+    post:
+      summary: Transfer money between envelopes
+      tags: [Envelopes]
+      parameters:
+        - in: path
+          name: from
+          schema:
+            type: integer
+          required: true
+          description: ID of the source envelope
+        - in: path
+          name: to
+          schema:
+            type: integer
+          required: true
+          description: ID of the target envelope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 100
+      responses:
+        200:
+          description: Transfer successful
+        400:
+          description: Invalid amount or insufficient funds
+        404:
+          description: Envelope not found
+
+  /transactions:
+    get:
+      summary: Get all transactions
+      tags: [Transactions]
+      responses:
+        200:
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+    post:
+      summary: Create a new transaction
+      tags: [Transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                envelope_id:
+                  type: integer
+                recipient:
+                  type: string
+                amount:
+                  type: integer
+      responses:
+        201:
+          description: Transaction created
+        400:
+          description: Invalid request
+        404:
+          description: Envelope not found

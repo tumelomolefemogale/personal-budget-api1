@@ -1,11 +1,18 @@
 const express = require('express');
 const app = express();
 const setupSwagger = require('./swagger');
-const pool = require('./database-connect'); // database connection
+const fs = require('fs');
+const yaml = require('yaml');
+const pool = require('./database-connect');
 const PORT = 3000;
 
 app.use(express.json());
 setupSwagger(app);
+
+const file = fs.readFileSync('./swagger.yaml', 'utf8');
+const swaggerDocument = yaml.parse(file);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // ENVELOPES
 // Create a new envelope
