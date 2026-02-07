@@ -27,7 +27,7 @@ app.get('/envelopes', (req, res) => {
     res.json(envelopes);
 });
 
-// Transfer from envelopes
+// Transfer money between envelopes
 app.post('/envelopes/transfer/:from/:to', (req, res) => {
     const fromId = Number(req.params.from);
     const toId = Number(req.params.to);
