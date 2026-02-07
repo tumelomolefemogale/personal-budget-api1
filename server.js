@@ -122,6 +122,7 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// ENVELOPES
 // Create a new envelope
 app.post('/envelopes', async (req, res) => {
     const { title, budget } = req.body;
@@ -264,6 +265,106 @@ app.delete('/envelopes/:id', async (req, res) => {
         console.error(err);
         res.status(500).send("Server error");
     }
+});
+
+// TRANSACTIONS
+// CREATE a new transaction
+app.post('/transactions', async (req, res) => {
+    const { envelope_id, amount, recipient } = req.body;
+    if (!envelope_id || !amount || !recipient) return res.status(400).send("Missing required fields");
+
+    try {
+        const envelopeResult = await pool.query('SELECT * FROM envelopes WHERE id=$1', [envelope_id]);
+        const envelope = envelopeResult.rows[0];
+        if (!envelope) return res.status(404).send("Envelope not found");
+        if (envelope.budget < amount) return res.status(400).send("Insufficient funds in envelope");
+
+        const updatedBudget = envelope.budget - amount;
+        await pool.query('UPDATE envelopes SET budget=$1 WHERE id=$2', [updatedBudget, envelope_id]);
+
+        const transactionResult = await pool.query(
+            'INSERT INTO transactions (envelope_id, amount, recipient) VALUES ($1, $2, $3) RETURNING *',
+            [envelope_id, amount, recipient]
+        );
+
+        res.status(201).json({
+            transaction: transactionResult.rows[0],
+            envelope: { ...envelope, budget: updatedBudget }
+        });
+    } catch (err) { res.status(500).send("Server error"); }
+});
+
+// GET all transactions
+app.get('/transactions', async (req, res) => {
+    try {
+        const allTransactionsResult = await pool.query(
+            `SELECT t.id, t.envelope_id, e.title AS envelope_title, t.amount, t.recipient, t.date
+             FROM transactions t JOIN envelopes e ON t.envelope_id = e.id ORDER BY t.date DESC`
+        );
+        res.json(allTransactionsResult.rows);
+    } catch (err) { res.status(500).send("Server error"); }
+});
+
+// GET a specific transaction
+app.get('/transactions/:id', async (req, res) => {
+    const transactionId = Number(req.params.id);
+    try {
+        const transactionResult = await pool.query(
+            `SELECT t.id, t.envelope_id, e.title AS envelope_title, t.amount, t.recipient, t.date
+             FROM transactions t JOIN envelopes e ON t.envelope_id = e.id WHERE t.id=$1`,
+            [transactionId]
+        );
+        if (!transactionResult.rows[0]) return res.status(404).send("Transaction not found");
+        res.json(transactionResult.rows[0]);
+    } catch (err) { res.status(500).send("Server error"); }
+});
+
+// UPDATE a transaction
+app.put('/transactions/:id', async (req, res) => {
+    const transactionId = Number(req.params.id);
+    const { amount: newAmount, recipient: newRecipient } = req.body;
+
+    try {
+        const transactionResult = await pool.query('SELECT * FROM transactions WHERE id=$1', [transactionId]);
+        const transaction = transactionResult.rows[0];
+        if (!transaction) return res.status(404).send("Transaction not found");
+
+        const envelopeResult = await pool.query('SELECT * FROM envelopes WHERE id=$1', [transaction.envelope_id]);
+        const envelope = envelopeResult.rows[0];
+
+        let adjustedBudget = envelope.budget + transaction.amount; // refund old amount
+        if (newAmount && newAmount > adjustedBudget) return res.status(400).send("Insufficient funds in envelope");
+        if (newAmount) adjustedBudget -= newAmount;
+
+        await pool.query('UPDATE envelopes SET budget=$1 WHERE id=$2', [adjustedBudget, envelope.id]);
+
+        const updatedTransactionResult = await pool.query(
+            'UPDATE transactions SET amount=$1, recipient=$2 WHERE id=$3 RETURNING *',
+            [newAmount || transaction.amount, newRecipient || transaction.recipient, transactionId]
+        );
+
+        res.json({ transaction: updatedTransactionResult.rows[0], envelope: { ...envelope, budget: adjustedBudget } });
+    } catch (err) { res.status(500).send("Server error"); }
+});
+
+// DELETE a transaction
+app.delete('/transactions/:id', async (req, res) => {
+    const transactionId = Number(req.params.id);
+
+    try {
+        const transactionResult = await pool.query('SELECT * FROM transactions WHERE id=$1', [transactionId]);
+        const transaction = transactionResult.rows[0];
+        if (!transaction) return res.status(404).send("Transaction not found");
+
+        const envelopeResult = await pool.query('SELECT * FROM envelopes WHERE id=$1', [transaction.envelope_id]);
+        const envelope = envelopeResult.rows[0];
+
+        const newBudget = envelope.budget + transaction.amount; // refund amount
+        await pool.query('UPDATE envelopes SET budget=$1 WHERE id=$2', [newBudget, envelope.id]);
+        await pool.query('DELETE FROM transactions WHERE id=$1', [transactionId]);
+
+        res.send(`Transaction ${transactionId} deleted. Envelope budget updated to ${newBudget}.`);
+    } catch (err) { res.status(500).send("Server error"); }
 });
 
 // Start server
