@@ -1,18 +1,22 @@
 # Personal Budget API
 
-A simple Node.js + Express API to manage a personal budget using the **Envelope Budgeting** method.
+A simple RESTful API for managing personal budgets, envelopes, and transactions using **Node.js**, **Express**, and **PostgreSQL**. Includes Swagger documentation.
 
 ---
 
 ## Features
 
-- Create envelopes (categories with a budget)
-- View all envelopes
-- View a specific envelope
-- Update envelope balances or title
-- Delete envelopes
-- Transfer budget between envelopes
-- Basic data validation and error handling
+- **Envelopes**
+  - Create, read, update, delete envelopes
+  - Transfer funds between envelopes
+
+- **Transactions**
+  - Create, read, update, delete transactions
+  - Tracks envelope budget changes automatically
+
+- **API Documentation**
+  - Swagger UI available at `/api-docs`
+  - Interactive and includes example data
 
 ---
 
@@ -21,5 +25,5 @@ A simple Node.js + Express API to manage a personal budget using the **Envelope 
 1. Clone the repository:
 
 ```bash
-git clone <your-repo-url>
- 
+git clone https://github.com/tumelomolefemogale/personal-budget-api1
+cd personal-budget
