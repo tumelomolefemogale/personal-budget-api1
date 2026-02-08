@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Personal Budget API
   version: 1.0.0
-  description: API for managing envelopes and transactions in a personal budgeting system.
+  description: API for managing envelopes and transactions.
 
 servers:
   - url: http://localhost:3000
@@ -31,6 +31,9 @@ components:
         envelope_id:
           type: integer
           example: 1
+        envelope_title:
+          type: string
+          example: Groceries
         recipient:
           type: string
           example: Supermarket
@@ -40,9 +43,12 @@ components:
         date:
           type: string
           format: date-time
-          example: '2026-02-07T12:00:00Z'
+          example: 2026-02-07T12:00:00Z
 
 paths:
+
+  # ---------------- ENVELOPES ----------------
+
   /envelopes:
     get:
       summary: Get all envelopes
@@ -65,10 +71,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Envelope'
+              type: object
+              required: [title, budget]
+              properties:
+                title:
+                  type: string
+                  example: Rent
+                budget:
+                  type: integer
+                  example: 1000
       responses:
         201:
           description: Envelope created
+        400:
+          description: Invalid input
 
   /envelopes/{id}:
     get:
@@ -77,10 +93,9 @@ paths:
       parameters:
         - in: path
           name: id
+          required: true
           schema:
             type: integer
-          required: true
-          description: Envelope ID
       responses:
         200:
           description: Envelope found
@@ -92,14 +107,14 @@ paths:
           description: Envelope not found
 
     put:
-      summary: Update an envelope
+      summary: Update envelope (change title or withdraw money)
       tags: [Envelopes]
       parameters:
         - in: path
           name: id
+          required: true
           schema:
             type: integer
-          required: true
       requestBody:
         required: true
         content:
@@ -109,8 +124,10 @@ paths:
               properties:
                 title:
                   type: string
+                  example: Updated Groceries
                 withdrawal:
                   type: integer
+                  example: 100
       responses:
         200:
           description: Envelope updated
@@ -120,14 +137,14 @@ paths:
           description: Envelope not found
 
     delete:
-      summary: Delete an envelope
+      summary: Delete envelope
       tags: [Envelopes]
       parameters:
         - in: path
           name: id
+          required: true
           schema:
             type: integer
-          required: true
       responses:
         200:
           description: Envelope deleted
@@ -141,26 +158,27 @@ paths:
       parameters:
         - in: path
           name: from
+          required: true
           schema:
             type: integer
-          required: true
-          description: ID of the source envelope
+          description: Source envelope ID
         - in: path
           name: to
+          required: true
           schema:
             type: integer
-          required: true
-          description: ID of the target envelope
+          description: Target envelope ID
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [amount]
               properties:
                 amount:
                   type: integer
-                  example: 100
+                  example: 200
       responses:
         200:
           description: Transfer successful
@@ -168,6 +186,8 @@ paths:
           description: Invalid amount or insufficient funds
         404:
           description: Envelope not found
+
+  # ---------------- TRANSACTIONS ----------------
 
   /transactions:
     get:
@@ -192,17 +212,86 @@ paths:
           application/json:
             schema:
               type: object
+              required: [envelope_id, amount, recipient]
               properties:
                 envelope_id:
                   type: integer
+                  example: 1
                 recipient:
                   type: string
+                  example: Supermarket
                 amount:
                   type: integer
+                  example: 100
       responses:
         201:
           description: Transaction created
         400:
-          description: Invalid request
+          description: Invalid request or insufficient funds
         404:
           description: Envelope not found
+
+  /transactions/{id}:
+    get:
+      summary: Get transaction by ID
+      tags: [Transactions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        404:
+          description: Transaction not found
+
+    put:
+      summary: Update transaction
+      tags: [Transactions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 150
+                recipient:
+                  type: string
+                  example: Updated Store
+      responses:
+        200:
+          description: Transaction updated
+        400:
+          description: Invalid update or insufficient funds
+        404:
+          description: Transaction not found
+
+    delete:
+      summary: Delete transaction
+      tags: [Transactions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Transaction deleted and envelope refunded
+        404:
+          description: Transaction not found
